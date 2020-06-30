@@ -28,19 +28,20 @@ int8_t lt_object(PyObject **u, PyObject **v) {
 typedef struct {
     PyObject_HEAD
     uint32_t capacity;
+    uint32_t size;
     PyObject **arr;
 } HeapObject;
 
 void heapify(HeapObject *heap, uint32_t r)
 {
     uint32_t _l = 2 * r + 1;
-    if (_l < heap->capacity && lt_object(&(heap->arr[r]), &(heap->arr[_l])) == 1) {
+    if (_l < heap->size && lt_object(&(heap->arr[r]), &(heap->arr[_l])) == 1) {
         swap(&(heap->arr[_l]), &(heap->arr[r]));
         heapify(heap, _l);
     }
     else {
         uint32_t _r = 2 * r + 2;
-        if (_r < heap->capacity && lt_object(&(heap->arr[r]), &(heap->arr[_r])) == 1) {
+        if (_r < heap->size && lt_object(&(heap->arr[r]), &(heap->arr[_r])) == 1) {
             swap(&(heap->arr[_r]), &(heap->arr[r]));
             heapify(heap, _r);
         }
@@ -66,7 +67,7 @@ static PyObject *Heap_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     }
     self->arr = (PyObject **)malloc(self->capacity * sizeof(PyObject *));
     for (uint32_t i = 0; i < self->capacity; ++i) self->arr[i] = NULL;
-
+    self->size = 0;
     return (PyObject *) self;
 }
 
@@ -83,20 +84,19 @@ static int Heap_init(HeapObject *self, PyObject *args, PyObject *kwargs)
     self->capacity = (uint32_t) capacity;
     self->arr = (PyObject **)malloc(self->capacity * sizeof(PyObject *));
     for (uint32_t i = 0; i < self->capacity; ++i) self->arr[i] = NULL;
+    self->size = 0;
     return 0;
 }
 
 static PyObject *Heap_insert(HeapObject *self, PyObject *el)
 {
     Py_INCREF(el);
-    int32_t idx = self->capacity - 1;
-    int32_t pi = get_parent(idx);
-    self->arr[idx] = el;
-
-    while (lt_object(&(self->arr[pi]), &(self->arr[idx])) == 1) {
-        swap(&(self->arr[pi]), &(self->arr[idx]));
-        idx = pi; pi = get_parent(idx);
-        if (pi < 0) break;
+    self->arr[self->size] = el;
+    int32_t pi = (self->size - 1) / 2;
+    ++self->size;
+    while (pi >= 0) {
+        heapify((HeapObject *) self, pi);
+        pi = (pi - 1) / 2;
     }
     Py_RETURN_NONE;
 }
