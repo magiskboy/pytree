@@ -5,12 +5,11 @@
 
 #define LESS_THAN(u, v) ((u) == NULL ? 1 : ((v) == NULL ? 0 : PyObject_RichCompareBool((u), (v), Py_LT)))
 
-inline void swap(PyObject **a, PyObject **b)
-{
-    PyObject *c = *a;
-    *a = *b;
-    *b = c;
-}
+#define SWAP(u, v)\
+    typeof((u)) *t = (u);\
+    (u) = (v);\
+    (v) = t;\
+
 
 typedef struct {
     PyObject_HEAD
@@ -29,7 +28,8 @@ void heapify(HeapObject *heap, int32_t r)
         if (lc < heap->size && LESS_THAN(heap->arr[largest], heap->arr[lc])) largest = lc;
         if (rc < heap->size && LESS_THAN(heap->arr[largest], heap->arr[rc])) largest = rc;
         if (largest == r) break;
-        swap(&(heap->arr[largest]), &(heap->arr[r]));
+
+        SWAP(heap->arr[largest], heap->arr[r])
         r = largest;
     }
 }
