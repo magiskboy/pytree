@@ -21,24 +21,21 @@ typedef struct {
 
 void heapify(HeapObject *heap, int32_t r)
 {
-    if (r < heap->size) {
-        int32_t lc = (r << 1) + 1;
-        int32_t rc = (r << 1) + 2;
-        int32_t largest = r;
+    uint32_t lc, rc, largest;
+    while (r < heap->size) {
+        lc = (r << 1) + 1;
+        rc = (r << 1) + 2;
+        largest = r;
         if (lc < heap->size && LESS_THAN(heap->arr[largest], heap->arr[lc])) largest = lc;
         if (rc < heap->size && LESS_THAN(heap->arr[largest], heap->arr[rc])) largest = rc;
-        if (largest != r) {
-            swap(&(heap->arr[largest]), &(heap->arr[r]));
-            heapify(heap, largest);
-        }
+        if (largest == r) break;
+        swap(&(heap->arr[largest]), &(heap->arr[r]));
+        r = largest;
     }
 }
 
 static void Heap_dealloc(HeapObject *self)
 {
-    for (int32_t i = 0; i < self->capacity; ++i) {
-        Py_XDECREF(self->arr[i]);
-    }
     free(self->arr);
     Py_TYPE(self)->tp_free(self);
 }
@@ -47,9 +44,6 @@ static PyObject *Heap_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     HeapObject *self;
     self = (HeapObject *) type->tp_alloc(type, 0);
-    if (self != NULL) {
-        self->arr = (PyObject **)malloc(self->capacity * sizeof(PyObject *));
-    }
     return (PyObject *) self;
 }
 
@@ -61,6 +55,7 @@ static int Heap_init(HeapObject *self, PyObject *args, PyObject *kwargs)
     if (self->capacity <= 0) {
         PyErr_SetString(PyExc_ValueError, "Can't not allocate for heap, capacity must be greate than 0"); return -1;
     }
+    self->arr = (PyObject **)malloc(self->capacity * sizeof(PyObject *));
     return 0;
 }
 
@@ -71,14 +66,13 @@ static PyObject *Heap_insert(HeapObject *self, PyObject *el)
         return PyErr_Occurred();
     }
 
-    Py_XINCREF(el);
+    Py_INCREF(el);
     self->arr[self->size] = el;
     int32_t curr = self->size++ - 1;
     while (curr >= 0) {
         curr = curr >> 1;
         heapify((HeapObject *) self, curr--);
     }
-
     Py_RETURN_NONE;
 }
 
