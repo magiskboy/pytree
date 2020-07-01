@@ -78,15 +78,28 @@ static PyObject *Heap_insert(HeapObject *self, PyObject *el)
 
 static PyObject *Heap_extract(HeapObject *self, PyObject *Py_UNUSED(ignored))
 {
-    if (self->arr[0] == NULL)
+    if (self->size == 0)
         Py_RETURN_NONE;
-
     PyObject *ret = self->arr[0];
-    self->arr[0] = NULL;
+    self->arr[0] = self->arr[self->size - 1];
+    self->arr[self->size - 1] = NULL;
     heapify((HeapObject *) self, 0);
     --self->size;
-
     return ret;
+}
+
+static PyObject *Heap_tolist(HeapObject *self, PyObject *Py_UNUSED(ignored))
+{
+    PyObject *l = PyList_New(self->capacity);
+    for (int32_t i = 0; i < self->capacity; ++i) {
+        if (self->arr[i] != NULL){
+            Py_INCREF(self->arr[i]);
+            PyList_SetItem(l, (Py_ssize_t) i, self->arr[i]);
+        }
+        else
+            PyList_SetItem(l, (Py_ssize_t) i, Py_None);
+    }
+    return l;
 }
 
 static PyObject *Heap_top(HeapObject *self, PyObject *Py_UNUSED(ignored))
@@ -105,6 +118,7 @@ static PyMemberDef Heap_members[] = {
 static PyMethodDef Heap_methods[] = {
     {"insert", (PyCFunction) Heap_insert, METH_O},
     {"extract", (PyCFunction) Heap_extract, METH_NOARGS},
+    {"tolist", (PyCFunction) Heap_tolist, METH_NOARGS},
     {"top", (PyCFunction) Heap_top, METH_NOARGS},
     {NULL}
 };
