@@ -3,55 +3,40 @@
 #include <Python.h>
 #include <structmember.h>
 
+#define LESS_THAN(u, v) ((u) == NULL ? 1 : ((v) == NULL ? 0 : PyObject_RichCompareBool((u), (v), Py_LT)))
 
-void swap(PyObject **a, PyObject **b)
+inline void swap(PyObject **a, PyObject **b)
 {
     PyObject *c = *a;
     *a = *b;
     *b = c;
 }
 
-int8_t get_parent(uint32_t i)
-{
-    return (i - 1) / 2;
-}
-
-int8_t lt_object(PyObject **u, PyObject **v) {
-    if (*u == NULL) return 1;
-    if (*v == NULL) return 0;
-    if (PyObject_RichCompare(*u, *v, Py_LT)) {
-        return 1;
-    }
-    return 0;
-}
-
 typedef struct {
     PyObject_HEAD
-    uint32_t capacity;
-    uint32_t size;
+    int32_t capacity;
+    int32_t size;
     PyObject **arr;
 } HeapObject;
 
-void heapify(HeapObject *heap, uint32_t r)
+void heapify(HeapObject *heap, int32_t r)
 {
-    uint32_t _l = 2 * r + 1;
-    if (_l < heap->size && lt_object(&(heap->arr[r]), &(heap->arr[_l])) == 1) {
-        swap(&(heap->arr[_l]), &(heap->arr[r]));
-        heapify(heap, _l);
-    }
-    else {
-        uint32_t _r = 2 * r + 2;
-        if (_r < heap->size && lt_object(&(heap->arr[r]), &(heap->arr[_r])) == 1) {
-            swap(&(heap->arr[_r]), &(heap->arr[r]));
-            heapify(heap, _r);
+    if (r < heap->size) {
+        int32_t lc = (r << 1) + 1;
+        int32_t rc = (r << 1) + 2;
+        int32_t largest = r;
+        if (lc < heap->size && LESS_THAN(heap->arr[largest], heap->arr[lc])) largest = lc;
+        if (rc < heap->size && LESS_THAN(heap->arr[largest], heap->arr[rc])) largest = rc;
+        if (largest != r) {
+            swap(&(heap->arr[largest]), &(heap->arr[r]));
+            heapify(heap, largest);
         }
     }
 }
 
 static void Heap_dealloc(HeapObject *self)
 {
-    uint32_t i;
-    for (i = 0; i < self->capacity; ++i) {
+    for (int32_t i = 0; i < self->capacity; ++i) {
         Py_XDECREF(self->arr[i]);
     }
     free(self->arr);
@@ -63,52 +48,49 @@ static PyObject *Heap_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     HeapObject *self;
     self = (HeapObject *) type->tp_alloc(type, 0);
     if (self != NULL) {
-        self->capacity = 0;
+        self->arr = (PyObject **)malloc(self->capacity * sizeof(PyObject *));
     }
-    self->arr = (PyObject **)malloc(self->capacity * sizeof(PyObject *));
-    for (uint32_t i = 0; i < self->capacity; ++i) self->arr[i] = NULL;
-    self->size = 0;
     return (PyObject *) self;
 }
 
 static int Heap_init(HeapObject *self, PyObject *args, PyObject *kwargs)
 {
     static char *kwlist[] = {"capacity", NULL};
-    int32_t capacity = 0;
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|i", kwlist, &capacity))
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|i", kwlist, &self->capacity))
         return -1;
-    if (capacity <= 0) {
-        PyErr_SetString(PyExc_ValueError, "Can't not allocate for heap, capacity must be than 0");
-        return -1;
+    if (self->capacity <= 0) {
+        PyErr_SetString(PyExc_ValueError, "Can't not allocate for heap, capacity must be greate than 0"); return -1;
     }
-    self->capacity = (uint32_t) capacity;
-    self->arr = (PyObject **)malloc(self->capacity * sizeof(PyObject *));
-    for (uint32_t i = 0; i < self->capacity; ++i) self->arr[i] = NULL;
-    self->size = 0;
     return 0;
 }
 
 static PyObject *Heap_insert(HeapObject *self, PyObject *el)
 {
-    Py_INCREF(el);
-    self->arr[self->size] = el;
-    int32_t pi = (self->size - 1) / 2;
-    ++self->size;
-    while (pi >= 0) {
-        heapify((HeapObject *) self, pi);
-        pi = (pi - 1) / 2;
+    if (self->size == self->capacity) {
+        PyErr_SetString(PyExc_MemoryError, "Memory over size");
+        return PyErr_Occurred();
     }
+
+    Py_XINCREF(el);
+    self->arr[self->size] = el;
+    int32_t curr = self->size++ - 1;
+    while (curr >= 0) {
+        curr = curr >> 1;
+        heapify((HeapObject *) self, curr--);
+    }
+
     Py_RETURN_NONE;
 }
 
 static PyObject *Heap_extract(HeapObject *self, PyObject *Py_UNUSED(ignored))
 {
-    PyObject *ret = self->arr[0];
-    if (ret == NULL)
+    if (self->arr[0] == NULL)
         Py_RETURN_NONE;
 
+    PyObject *ret = self->arr[0];
     self->arr[0] = NULL;
     heapify((HeapObject *) self, 0);
+    --self->size;
 
     return ret;
 }
@@ -122,6 +104,7 @@ static PyObject *Heap_top(HeapObject *self, PyObject *Py_UNUSED(ignored))
 
 static PyMemberDef Heap_members[] = {
     {"capacity", T_INT, offsetof(HeapObject, capacity), 0, "capacity"},
+    {"size", T_INT, offsetof(HeapObject, size), 0, "size"},
     {NULL}
 };
 
