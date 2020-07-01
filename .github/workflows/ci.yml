@@ -19,4 +19,4 @@ jobs:
         python -mpip install --editable .
     - name: Test
       run: |
-        python -munitest
+        python -munittest

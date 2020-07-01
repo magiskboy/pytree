@@ -18,5 +18,5 @@ setup(
     packages=find_packages("src", exclude=["test*", "examples"]),
     package_dir={"": "src"},
     license="MIT",
-    python_requires=">=3.8",
+    python_requires=">=3.6",
 )
