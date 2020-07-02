@@ -3,12 +3,14 @@
 #include <Python.h>
 #include <structmember.h>
 
+static void* _temp = NULL;
+
 #define LESS_THAN(u, v) ((u) == NULL ? 1 : ((v) == NULL ? 0 : PyObject_RichCompareBool((u), (v), Py_LT)))
 
 #define SWAP(u, v)\
-    typeof((u)) *t = (u);\
+    _temp  = (u);\
     (u) = (v);\
-    (v) = t;\
+    (v) = _temp;\
 
 
 typedef struct {

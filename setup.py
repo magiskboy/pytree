@@ -5,7 +5,7 @@ from setuptools import (
 )
 
 
-heap_mod = Extension("heap", sources=["src/pytree/heap.c"])
+heap_mod = Extension("heap", sources=["src/pytree/Py_heap.c"])
 
 setup(
     name="pytree",
