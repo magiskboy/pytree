@@ -3,10 +3,11 @@
 #include <stdio.h>
 #include <string.h>
 
+
 #define SWAP(u, v)\
-    struct node_t _t = *(u);\
+    struct node_t _tn = *(u);\
     *(u) = *(v);\
-    *(v) = _t;
+    *(v) = _tn;
 
 void make_heap(struct heap_t* h, size_t cap)
 {
@@ -17,7 +18,7 @@ void make_heap(struct heap_t* h, size_t cap)
 
 void heapify(struct heap_t* h, int32_t i)
 {
-    uint32_t largest, lc, rc;
+    int32_t largest, lc, rc;
     while (i < h->size)
     {
         lc = (i << 1) + 1;
@@ -54,8 +55,8 @@ void extract(struct heap_t* h, void** val)
     }
 
     *val = h->data[0].value;
-    h->data[0] = h->data[h->size];
-    h->data[h->size] = (struct node_t){ .key = -1, .value = NULL };
+    h->data[0] = h->data[h->size-1];
+    h->data[h->size-1] = (struct node_t){ .key = -1, .value = NULL };
     heapify(h, 0);
     --h->size;
 }

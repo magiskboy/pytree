@@ -22,16 +22,18 @@ class Heap:
 
     def __init__(self, capacity):
         self._h = heap_t()
-        lib.make_heap(pointer(self._h), capacity)
+        self._hp = pointer(self._h)
+        lib.make_heap(self._hp, capacity+1)
 
     def insert(self, key, o):
         el = py_object(o)
         pythonapi.Py_IncRef(el)
-        self.__class__._insert(pointer(self._h), key, el)
+        self.__class__._insert(self._hp, key, el)
 
     def extract(self):
         _r = py_object()
-        self.__class__._extract(pointer(self._h), pointer(_r))
+        self.__class__._extract(self._hp, pointer(_r))
+        pythonapi.Py_DecRef(_r)
         return _r.value if _r else None
 
     @property
@@ -46,29 +48,29 @@ class Heap:
 
 
 if __name__ == '__main__':
-    # import random
-    # l = [random.randint(1, 100) for _ in range(100)]
-    # h = Heap(len(l))
-    # for i in l:
-    #     h.insert(i, i)
-    # ll = list()
-    # j = h.extract()
-    # while (j != None):
-    #     ll.append(j)
-    #     j = h.extract()
-    # print(ll[:10])
+    from timeit import timeit
+    from random import randint
+    import heapq
 
-    class Person:
-        def __init__(self, name):
-            self.name = name
-        def __str__(self):
-            return self.name
+    data = [randint(1, 1000) for _ in range(1000000)]
 
-    h = Heap(4)
-    a = Person("lmao")
-    b = Person("lmfao")
-    h.insert(1, a)
-    h.insert(2, b)
+    def test_heapq():
+        global data
+        l = []
+        for i in data:
+            heapq.heappush(l, i)
+        for i in range(len(data)):
+            heapq.heappop(l)
 
-    print(h.extract())
-    print(h.extract())
+    def test_heap():
+        global data
+        h = Heap(len(data))
+        ll = []
+        for i in data:
+            h.insert(1000-i, i)
+        for i in range(len(data)):
+            h.extract()
+
+    a = timeit(test_heapq, number=1)
+    b = timeit(test_heap, number=1)
+    print(f'{a} / {b} = {a/b}')
